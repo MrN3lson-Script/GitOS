@@ -1,24 +1,30 @@
-AS = nasm
-CC = i686-elf-g++
-LD = i686-elf-gcc
+CC  = gcc
+CXX = g++
+LD  = ld
+AS  = nasm
 
-ASFLAGS = -f elf32
-CFLAGS = -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti
-LDFLAGS = -T linker.ld -ffreestanding -O2 -nostdlib
+CXXFLAGS = -m32 -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-stack-protector -fno-pic -fno-pie -fno-plt -fno-exceptions -fno-rtti -std=c++17 -O2
 
-OBJS = boot.o kernel.o
+.PHONY: all clean run
 
-gitos.bin: $(OBJS)
-	$(LD) $(LDFLAGS) -o $@ $^ -lgcc
-
-boot.o: boot.asm
-	$(AS) $(ASFLAGS) $< -o $@
+all: GitFreedom.img
 
 kernel.o: kernel.cpp
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+kernel.bin: kernel.o link.ld
+	$(LD) -m elf_i386 -T link.ld -o $@ kernel.o --oformat binary -nostdlib
+
+boot.bin: boot.asm kernel.bin
+	$(AS) -f bin boot.asm -o $@
+
+GitFreedom.img: boot.bin
+	dd if=/dev/zero bs=1M count=10 of=$@ 2>/dev/null
+	dd if=boot.bin of=$@ conv=notrunc 2>/dev/null
+	@echo "=== GitFreedom OS Compiled Successfully ==="
+
+run: GitFreedom.img
+	qemu-system-i386 -hda GitFreedom.img -m 16M
 
 clean:
-	rm -f *.o gitos.bin
-
-run: gitos.bin
-	qemu-system-i386 -kernel gitos.bin
+	rm -f *.o *.bin *.img

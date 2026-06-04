@@ -1,29 +1,69 @@
-MBOOT_PAGE_ALIGN    equ 1<<0
-MBOOT_MEM_INFO      equ 1<<1
-MBOOT_HEADER_MAGIC  equ 0x1BADB002
-MBOOT_HEADER_FLAGS  equ MBOOT_PAGE_ALIGN | MBOOT_MEM_INFO
-MBOOT_CHECKSUM      equ -(MBOOT_HEADER_MAGIC + MBOOT_HEADER_FLAGS)
+[BITS 16]
+[ORG 0x7C00]
 
-section .multiboot
-align 4
-    dd MBOOT_HEADER_MAGIC
-    dd MBOOT_HEADER_FLAGS
-    dd MBOOT_CHECKSUM
-
-section .bss
-align 16
-stack_bottom:
-    resb 16384
-stack_top:
-
-section .text
-global _start
-extern kernel_main
-
-_start:
-    mov esp, stack_top
-    call kernel_main
+start:
     cli
+    xor ax, ax
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    mov sp, 0x7C00
+    sti
+
+    mov [BOOT_DRIVE], dl
+
+    mov ah, 0x42
+    mov dl, [BOOT_DRIVE]
+    mov si, dap
+    int 0x13
+    jc .disk_error
+
+    cli
+    lgdt [gdt_desc]
+    mov eax, cr0
+    or  eax, 1
+    mov cr0, eax
+    jmp 0x08:pm32
+
+.disk_error:
+    mov ax, 0xB800
+    mov es, ax
+    mov word [es:0], 0x0F45
 .hang:
-    hlt
     jmp .hang
+
+align 4
+dap:
+    db 0x10, 0
+    dw 64
+    dw 0x7E00, 0x0000
+    dq 1
+
+[BITS 32]
+pm32:
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    mov fs, ax
+    mov gs, ax
+    mov esp, 0x90000
+    jmp 0x7E00
+
+BOOT_DRIVE db 0
+
+align 8
+gdt_start:
+    dq 0
+    dq 0x00CF9A000000FFFF
+    dq 0x00CF92000000FFFF
+gdt_end:
+gdt_desc:
+    dw gdt_end - gdt_start - 1
+    dd gdt_start
+
+times 510-($-$$) db 0
+dw 0xAA55
+
+kernel_data:
+incbin "kernel.bin"
