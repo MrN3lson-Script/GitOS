@@ -1,4 +1,5 @@
 ENTRY(kmain)
+OUTPUT_FORMAT(binary)
 SECTIONS {
     . = 0x7E00;
     .text   : { 
@@ -7,5 +8,10 @@ SECTIONS {
     }
     .rodata : { *(.rodata*) }
     .data   : { *(.data*) }
-    .bss    : { *(.bss*) *(COMMON) }
+    .bss    : { 
+        *(.bss*) 
+        *(COMMON) 
+    }
+    . = ALIGN(4);
+    _end = .;
 }
