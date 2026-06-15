@@ -12,8 +12,11 @@ all: GitFreedom.img
 kernel.o: kernel.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-kernel.bin: kernel.o link.ld
-	$(LD) -m elf_i386 -T link.ld -o $@ kernel.o --oformat binary -nostdlib
+settings.o: settings.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+kernel.bin: kernel.o settings.o link.ld
+	$(LD) -m elf_i386 -T link.ld -o $@ kernel.o settings.o --oformat binary -nostdlib
 
 boot.bin: boot.asm kernel.bin
 	$(AS) -f bin boot.asm -o $@
