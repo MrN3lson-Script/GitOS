@@ -35,7 +35,7 @@ start:
 align 4
 dap:
     db 0x10, 0
-    dw 64
+    dw 512
     dw 0x7E00, 0x0000
     dq 1
 
